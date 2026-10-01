@@ -50,6 +50,13 @@ class LLMEngine:
             pass
 
     def load_model(self, model_name: str) -> None:
+        if (
+            self._is_ready
+            and self.active_model_name == model_name
+            and self._llm is not None
+        ):
+            return
+
         model_path = os.path.join(settings.models_dir, model_name)
         if not os.path.exists(model_path):
             AuditService.log_model_load(
@@ -67,14 +74,9 @@ class LLMEngine:
             [
                 {"layers": 99, "ctx": settings.context.max_context},
                 {"layers": 28, "ctx": 4096},
-                {"layers": 18, "ctx": 4096},
-                {"layers": 0, "ctx": 4096},
             ]
             if file_size_gb > 7.0
-            else [
-                {"layers": 99, "ctx": settings.context.max_context},
-                {"layers": 32, "ctx": 4096},
-            ]
+            else [{"layers": 99, "ctx": settings.context.max_context}]
         )
 
         last_error = None
@@ -106,7 +108,6 @@ class LLMEngine:
                     del self._llm
                     self._llm = None
                 gc.collect()
-                time.sleep(0.5)
 
         self._is_ready = False
         duration = time.perf_counter() - start_time
@@ -121,7 +122,6 @@ class LLMEngine:
             del self._llm
             self._llm = None
             gc.collect()
-            time.sleep(0.3)
         if self.active_model_name:
             AuditService.write_entry(
                 "MODEL_UNLOADED", {"model": self.active_model_name}

@@ -22,6 +22,7 @@ export default function App() {
     const [models, setModels] = useState([]);
     const [activeModel, setActiveModel] = useState('');
     const [isSwitchingModel, setIsSwitchingModel] = useState(false);
+    const [switchingModelName, setSwitchingModelName] = useState(null);
     const [deepThinking, setDeepThinking] = useState(false);
     const [webSearch, setWebSearch] = useState(false);
 
@@ -95,12 +96,18 @@ export default function App() {
     };
 
     const handleSelectModel = async (modelName) => {
+        if (modelName === activeModel || isSwitchingModel) return;
+        setSwitchingModelName(modelName);
         setIsSwitchingModel(true);
         try {
             await switchModel(modelName);
             setActiveModel(modelName);
+            if (window.innerWidth < 768) {
+                setSidebarOpen(false);
+            }
         } finally {
             setIsSwitchingModel(false);
+            setSwitchingModelName(null);
         }
     };
 
@@ -201,6 +208,7 @@ export default function App() {
                 activeModel={activeModel}
                 onSelectModel={handleSelectModel}
                 isSwitchingModel={isSwitchingModel}
+                switchingModelName={switchingModelName}
             />
 
             <div className="flex-1 flex flex-col h-full min-w-0">
@@ -208,6 +216,7 @@ export default function App() {
                     activeModel={activeModel}
                     models={models}
                     onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                    isSwitchingModel={isSwitchingModel}
                 />
 
                 <main className="flex-1 overflow-y-auto">

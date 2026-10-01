@@ -1,13 +1,14 @@
 import React from 'react';
-import { Sparkles, Menu } from 'lucide-react';
+import { Sparkles, Menu, Loader2 } from 'lucide-react';
 
-export function Header({ activeModel, models = [], onToggleSidebar }) {
-    const getModelName = () => {
+export function Header({ activeModel, models = [], onToggleSidebar, isSwitchingModel }) {
+    const getModelLabel = () => {
+        if (isSwitchingModel) return 'Trocando modelo na GPU...';
         if (!activeModel) return 'Nenhum modelo ativo';
-        if (typeof activeModel === 'object') return activeModel.label || activeModel.filename || '';
-        const found = models.find((m) => (typeof m === 'object' ? m.filename : m) === activeModel);
-        if (found) return typeof found === 'object' ? found.label : found;
-        return activeModel;
+        const filename = typeof activeModel === 'object' ? activeModel.filename : activeModel;
+        if (filename.toLowerCase().includes('coder')) return 'Aetheris Pro (Qwen 2.5 Coder 7B)';
+        if (filename.toLowerCase().includes('hermes')) return 'Aetheris Fast (Hermes 3 8B)';
+        return filename;
     };
 
     return (
@@ -16,8 +17,8 @@ export function Header({ activeModel, models = [], onToggleSidebar }) {
                 <button
                     type="button"
                     onClick={onToggleSidebar}
-                    aria-label="Abrir barra lateral"
-                    className="p-2 rounded-full hover:bg-[#282a2c] text-[#c4c7c5] transition-colors md:hidden cursor-pointer"
+                    aria-label="Abrir menu lateral"
+                    className="p-2 rounded-full hover:bg-[#282a2c] text-[#c4c7c5] transition-colors md:hidden cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
                 >
                     <Menu size={20} />
                 </button>
@@ -28,8 +29,12 @@ export function Header({ activeModel, models = [], onToggleSidebar }) {
             </div>
 
             <div className="flex items-center gap-2 text-xs font-mono text-[#8e918f]">
-                <Sparkles size={14} className="text-[#a8c7fa]" />
-                <span className="hidden sm:inline">{getModelName()}</span>
+                {isSwitchingModel ? (
+                    <Loader2 size={14} className="text-[#a8c7fa] animate-spin" />
+                ) : (
+                    <Sparkles size={14} className="text-[#a8c7fa]" />
+                )}
+                <span className="hidden sm:inline">{getModelLabel()}</span>
             </div>
         </header>
     );
