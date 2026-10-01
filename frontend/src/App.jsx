@@ -121,7 +121,7 @@ export default function App() {
 
     const handleSend = async () => {
         const text = input.trim();
-        if (!text || isGenerating) return;
+        if (!text || isGenerating || isSwitchingModel) return;
 
         setInput('');
         const newMessages = [...messages, { role: 'user', content: text }];
@@ -244,6 +244,7 @@ export default function App() {
                     setInput={setInput}
                     onSend={handleSend}
                     isGenerating={isGenerating}
+                    isSwitchingModel={isSwitchingModel}
                     onStop={handleStop}
                     deepThinking={deepThinking}
                     setDeepThinking={setDeepThinking}

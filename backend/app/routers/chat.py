@@ -15,11 +15,6 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 
 @router.post("/stream")
 async def stream_chat(req: ChatStreamRequest, http_request: Request):
-    if not engine.is_ready:
-        raise HTTPException(
-            status_code=503, detail="Nenhum modelo carregado na memória."
-        )
-
     conv_id = req.conversation_id
     if conv_id is None:
         first_prompt = req.messages[-1].content if req.messages else "Nova Conversa"
@@ -83,6 +78,9 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
 
         try:
             async with engine.lock:
+                if not engine.is_ready:
+                    raise RuntimeError("Nenhum modelo ativo ou pronto para inferência.")
+
                 for chunk in engine.client.create_chat_completion(
                     messages=processed_messages,
                     max_tokens=settings.context.max_gen_tokens,
