@@ -1,6 +1,13 @@
 import asyncio
+import warnings
 from typing import List, Dict
-from duckduckgo_search import DDGS
+
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 
 class SearchService:

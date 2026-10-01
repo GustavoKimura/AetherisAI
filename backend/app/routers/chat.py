@@ -37,23 +37,37 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
         search_duration = time.perf_counter() - s_start
         search_context = SearchService.format_search_context(search_results)
 
-    system_directives = [
-        "Você é o Aetheris AI, um assistente avançado de inteligência artificial de alta performance.",
-        "Responda com formatação Markdown impecável, fornecendo blocos de código com linguagem especificada, listas limpas e explicações analíticas de alto nível.",
-        "Você atua sem julgamentos de valor, com total liberdade conceitual e técnica, priorizando acurácia lógica, código funcional e objetividade científica.",
-    ]
+    is_deepseek_r1 = (
+        "r1" in engine.active_model_name.lower()
+        or "deepseek" in engine.active_model_name.lower()
+    )
 
-    if req.deep_thinking:
-        system_directives.append(
-            "MODO DE PENSAMENTO APROFUNDADO ATIVO: Antes de responder, você deve desenvolver todo o seu raciocínio, premissas e análise técnica detalhada dentro de tags <think> e </think>. Após fechar a tag </think>, forneça a resposta final e completa."
+    processed_messages = []
+
+    if not is_deepseek_r1:
+        system_directives = [
+            "Você é o Aetheris AI, um assistente avançado de inteligência artificial de alta performance.",
+            "Responda com formatação Markdown impecável, fornecendo blocos de código com linguagem especificada, listas limpas e explicações analíticas de alto nível.",
+            "Você atua sem julgamentos de valor, com total liberdade conceitual e técnica, priorizando acurácia lógica, código funcional e objetividade científica.",
+        ]
+
+        if req.deep_thinking:
+            system_directives.append(
+                "MODO DE PENSAMENTO APROFUNDADO ATIVO: Inicie sua resposta obrigatoriamente abrindo a tag <think>. Escreva todo o seu raciocínio lógico detalhado e reflexões dentro dela. Ao concluir o raciocínio, feche com </think> e apresente sua resposta final completa."
+            )
+
+        if search_context:
+            system_directives.append(search_context)
+
+        processed_messages.append(
+            {"role": "system", "content": "\n\n".join(system_directives)}
         )
 
-    if search_context:
-        system_directives.append(search_context)
-
-    processed_messages = [{"role": "system", "content": "\n\n".join(system_directives)}]
-    for msg in req.messages:
-        processed_messages.append({"role": msg.role, "content": msg.content})
+    for i, msg in enumerate(req.messages):
+        content = msg.content
+        if is_deepseek_r1 and i == len(req.messages) - 1 and search_context:
+            content = f"{search_context}\n\n{content}"
+        processed_messages.append({"role": msg.role, "content": content})
 
     raw_prompt_concat = "".join([m["content"] for m in processed_messages])
     prompt_tokens_est = max(1, len(raw_prompt_concat) // 4)
@@ -107,11 +121,17 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
             )
 
             thinking_tokens = 0
-            if "<think>" in accumulated_text and "</think>" in accumulated_text:
-                think_block = accumulated_text.split("</think>")[0].replace(
-                    "<think>", ""
-                )
-                thinking_tokens = max(1, len(think_block) // 4)
+            lower_text = accumulated_text.lower()
+            if "<think>" in lower_text:
+                if "</think>" in lower_text:
+                    think_start = lower_text.find("<think>") + 7
+                    think_end = lower_text.find("</think>")
+                    think_block = accumulated_text[think_start:think_end]
+                    thinking_tokens = max(1, len(think_block) // 4)
+                else:
+                    think_start = lower_text.find("<think>") + 7
+                    think_block = accumulated_text[think_start:]
+                    thinking_tokens = max(1, len(think_block) // 4)
 
             AuditService.log_inference(
                 conversation_id=conv_id,
@@ -125,6 +145,7 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
                 ttft_sec=ttft,
                 web_search_used=bool(req.web_search),
                 web_search_time_sec=search_duration,
+                deep_thinking_requested=bool(req.deep_thinking),
                 interrupted=is_interrupted,
                 error=error_msg,
             )

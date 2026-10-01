@@ -1,6 +1,5 @@
 import os
 import json
-import traceback
 from datetime import datetime
 from typing import Dict, Any, Optional
 from app.config import settings
@@ -92,6 +91,7 @@ class AuditService:
         ttft_sec: float,
         web_search_used: bool,
         web_search_time_sec: float,
+        deep_thinking_requested: bool,
         interrupted: bool = False,
         error: Optional[str] = None,
     ):
@@ -113,7 +113,8 @@ class AuditService:
                 "features": {
                     "web_search": web_search_used,
                     "web_search_latency_sec": round(web_search_time_sec, 3),
-                    "deep_thinking": thinking_tokens > 0,
+                    "deep_thinking_requested": deep_thinking_requested,
+                    "deep_thinking_detected": thinking_tokens > 0,
                 },
                 "tokens": {
                     "prompt_tokens_est": prompt_tokens_est,
