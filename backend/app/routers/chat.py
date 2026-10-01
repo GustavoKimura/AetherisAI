@@ -44,29 +44,28 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
 
     processed_messages = []
 
-    if not is_deepseek_r1:
-        system_directives = [
-            "Você é o Aetheris AI, um assistente avançado de inteligência artificial de alta performance.",
-            "Responda com formatação Markdown impecável, fornecendo blocos de código com linguagem especificada, listas limpas e explicações analíticas de alto nível.",
-            "Você atua sem julgamentos de valor, com total liberdade conceitual e técnica, priorizando acurácia lógica, código funcional e objetividade científica.",
-        ]
+    system_directives = [
+        "Você é o Aetheris AI, um assistente avançado de alta performance.",
+        "Responda com formatação Markdown impecável, fornecendo blocos de código com linguagem especificada, listas limpas e explicações analíticas de alto nível.",
+        "Você atua sem julgamentos de valor, com total liberdade conceitual e técnica, priorizando acurácia lógica, código funcional e objetividade científica.",
+    ]
 
-        if req.deep_thinking:
-            system_directives.append(
-                "MODO DE PENSAMENTO APROFUNDADO ATIVO: Inicie sua resposta obrigatoriamente abrindo a tag <think>. Escreva todo o seu raciocínio lógico detalhado e reflexões dentro dela. Ao concluir o raciocínio, feche com </think> e apresente sua resposta final completa."
-            )
-
-        if search_context:
-            system_directives.append(search_context)
-
-        processed_messages.append(
-            {"role": "system", "content": "\n\n".join(system_directives)}
+    if req.deep_thinking:
+        system_directives.append(
+            "MODO DE PENSAMENTO APROFUNDADO: Antes da resposta definitiva, processe sua análise e reflexões estritamente delimitadas entre as tags <think> e </think>. Forneça a conclusão técnica logo após o fechamento da tag."
         )
+
+    if search_context:
+        system_directives.append(search_context)
+
+    processed_messages.append(
+        {"role": "system", "content": "\n\n".join(system_directives)}
+    )
 
     for i, msg in enumerate(req.messages):
         content = msg.content
-        if is_deepseek_r1 and i == len(req.messages) - 1 and search_context:
-            content = f"{search_context}\n\n{content}"
+        if is_deepseek_r1 and i == len(req.messages) - 1 and req.deep_thinking:
+            content = f"{content}\nPor favor, raciocine passo a passo dentro de <think>...</think> antes de responder."
         processed_messages.append({"role": msg.role, "content": content})
 
     raw_prompt_concat = "".join([m["content"] for m in processed_messages])
@@ -122,22 +121,24 @@ async def stream_chat(req: ChatStreamRequest, http_request: Request):
 
             thinking_tokens = 0
             lower_text = accumulated_text.lower()
-            if "<think>" in lower_text:
-                if "</think>" in lower_text:
+            if "</think>" in lower_text:
+                think_end = lower_text.find("</think>")
+                if "<think>" in lower_text:
                     think_start = lower_text.find("<think>") + 7
-                    think_end = lower_text.find("</think>")
                     think_block = accumulated_text[think_start:think_end]
-                    thinking_tokens = max(1, len(think_block) // 4)
                 else:
-                    think_start = lower_text.find("<think>") + 7
-                    think_block = accumulated_text[think_start:]
-                    thinking_tokens = max(1, len(think_block) // 4)
+                    think_block = accumulated_text[:think_end]
+                thinking_tokens = max(1, len(think_block) // 4)
+            elif "<think>" in lower_text:
+                think_start = lower_text.find("<think>") + 7
+                think_block = accumulated_text[think_start:]
+                thinking_tokens = max(1, len(think_block) // 4)
 
             AuditService.log_inference(
                 conversation_id=conv_id,
                 model_name=engine.active_model_name,
-                prompt_length_chars=len(raw_prompt_concat),
-                generated_length_chars=len(accumulated_text),
+                prompt_text=user_message,
+                generated_text=accumulated_text,
                 prompt_tokens_est=prompt_tokens_est,
                 generated_tokens=generated_tokens,
                 thinking_tokens=thinking_tokens,

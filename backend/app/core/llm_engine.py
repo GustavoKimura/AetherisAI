@@ -62,35 +62,58 @@ class LLMEngine:
         self._optimize_process_affinity()
 
         file_size_gb = os.path.getsize(model_path) / (1024**3)
-        gpu_layers = 99 if file_size_gb <= 7.0 else 24
 
-        try:
-            self._llm = Llama(
-                model_path=model_path,
-                n_gpu_layers=gpu_layers,
-                n_threads=settings.model.n_threads,
-                n_threads_batch=settings.model.n_threads_batch,
-                n_batch=settings.model.n_batch,
-                n_ubatch=settings.model.n_ubatch,
-                n_ctx=settings.context.max_context,
-                flash_attn=False,
-                use_mmap=True,
-                use_mlock=False,
-                verbose=False,
-            )
-            self.active_model_name = model_name
-            self._is_ready = True
-            duration = time.perf_counter() - start_time
-            AuditService.log_model_load(
-                model_name, model_path, gpu_layers, duration, True
-            )
-        except Exception as exc:
-            self._is_ready = False
-            duration = time.perf_counter() - start_time
-            AuditService.log_model_load(
-                model_name, model_path, gpu_layers, duration, False, str(exc)
-            )
-            raise exc
+        allocation_attempts = (
+            [
+                {"layers": 99, "ctx": settings.context.max_context},
+                {"layers": 28, "ctx": 4096},
+                {"layers": 18, "ctx": 4096},
+                {"layers": 0, "ctx": 4096},
+            ]
+            if file_size_gb > 7.0
+            else [
+                {"layers": 99, "ctx": settings.context.max_context},
+                {"layers": 32, "ctx": 4096},
+            ]
+        )
+
+        last_error = None
+        for config in allocation_attempts:
+            try:
+                self._llm = Llama(
+                    model_path=model_path,
+                    n_gpu_layers=config["layers"],
+                    n_threads=settings.model.n_threads,
+                    n_threads_batch=settings.model.n_threads_batch,
+                    n_batch=settings.model.n_batch,
+                    n_ubatch=settings.model.n_ubatch,
+                    n_ctx=config["ctx"],
+                    flash_attn=False,
+                    use_mmap=True,
+                    use_mlock=False,
+                    verbose=False,
+                )
+                self.active_model_name = model_name
+                self._is_ready = True
+                duration = time.perf_counter() - start_time
+                AuditService.log_model_load(
+                    model_name, model_path, config["layers"], duration, True
+                )
+                return
+            except Exception as exc:
+                last_error = exc
+                if self._llm is not None:
+                    del self._llm
+                    self._llm = None
+                gc.collect()
+                time.sleep(0.5)
+
+        self._is_ready = False
+        duration = time.perf_counter() - start_time
+        AuditService.log_model_load(
+            model_name, model_path, 0, duration, False, str(last_error)
+        )
+        raise last_error
 
     def unload(self) -> None:
         self._is_ready = False

@@ -82,8 +82,8 @@ class AuditService:
         cls,
         conversation_id: Optional[int],
         model_name: str,
-        prompt_length_chars: int,
-        generated_length_chars: int,
+        prompt_text: str,
+        generated_text: str,
         prompt_tokens_est: int,
         generated_tokens: int,
         thinking_tokens: int,
@@ -95,7 +95,6 @@ class AuditService:
         interrupted: bool = False,
         error: Optional[str] = None,
     ):
-        eval_time = max(0.001, ttft_sec)
         gen_time = (
             max(0.001, total_time_sec - ttft_sec)
             if total_time_sec > ttft_sec
@@ -128,8 +127,9 @@ class AuditService:
                     "generation_tokens_per_sec": round(tps, 2),
                 },
                 "lengths": {
-                    "prompt_chars": prompt_length_chars,
-                    "generated_chars": generated_length_chars,
+                    "prompt_chars": len(prompt_text),
+                    "generated_chars": len(generated_text),
                 },
+                "content": {"prompt": prompt_text, "generated": generated_text},
             },
         )

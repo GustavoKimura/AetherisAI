@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { ChevronDown, ChevronRight, Brain, Copy, Check, User, Sparkles } from 'lucide-react';
 
 export function ChatMessage({ role, content }) {
@@ -11,20 +12,18 @@ export function ChatMessage({ role, content }) {
     let thinkingContent = '';
     let finalContent = content;
 
-    if (content.includes('<think>')) {
+    if (content.includes('</think>')) {
         const parts = content.split('</think>');
-        if (parts.length > 1) {
-            thinkingContent = parts[0].replace('<think>', '').trim();
-            finalContent = parts.slice(1).join('</think>').trim();
-        } else {
-            thinkingContent = content.replace('<think>', '').trim();
-            finalContent = '';
-        }
+        thinkingContent = parts[0].replace('<think>', '').trim();
+        finalContent = parts.slice(1).join('</think>').trim();
+    } else if (content.includes('<think>')) {
+        thinkingContent = content.replace('<think>', '').trim();
+        finalContent = '';
     }
 
-    const handleCopy = (codeText, blockIndex) => {
+    const handleCopy = (codeText) => {
         navigator.clipboard.writeText(codeText);
-        setCopiedCode(blockIndex);
+        setCopiedCode(codeText);
         setTimeout(() => setCopiedCode(null), 2000);
     };
 
@@ -60,22 +59,25 @@ export function ChatMessage({ role, content }) {
                         </div>
                     )}
 
-                    <div className="text-sm md:text-[15px] leading-relaxed text-[#e3e3e3] prose prose-invert max-w-none">
+                    <div className="text-sm md:text-[15px] leading-relaxed text-[#e3e3e3] prose prose-invert max-w-none break-words">
                         <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
+                            remarkPlugins={[remarkGfm, remarkBreaks]}
                             components={{
+                                p({ children }) {
+                                    return <p className="mb-4 last:mb-0 leading-relaxed whitespace-pre-wrap">{children}</p>;
+                                },
                                 code({ node, inline, className, children, ...props }) {
                                     const match = /language-(\w+)/.exec(className || '');
                                     const codeString = String(children).replace(/\n$/, '');
 
                                     if (!inline && match) {
                                         return (
-                                            <div className="relative my-3 rounded-xl overflow-hidden border border-[#2d2f31] bg-[#1e1f20]">
+                                            <div className="relative my-4 rounded-xl overflow-hidden border border-[#2d2f31] bg-[#1e1f20]">
                                                 <div className="flex items-center justify-between px-4 py-1.5 bg-[#282a2c] text-xs font-mono text-[#8e918f]">
                                                     <span>{match[1]}</span>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleCopy(codeString, codeString)}
+                                                        onClick={() => handleCopy(codeString)}
                                                         className="flex items-center gap-1 hover:text-[#e3e3e3] transition-colors"
                                                     >
                                                         {copiedCode === codeString ? <Check size={14} /> : <Copy size={14} />}

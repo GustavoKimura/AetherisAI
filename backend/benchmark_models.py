@@ -86,6 +86,7 @@ def run_single_test(client: httpx.Client, test: dict):
                 "ttft": 0.0,
                 "tps": 0.0,
                 "total_time": 0.0,
+                "has_think": False,
             }
 
         for line in response.iter_lines():
@@ -112,13 +113,16 @@ def run_single_test(client: httpx.Client, test: dict):
     gen_time = max(0.001, total_time - ttft) if total_time > ttft else total_time
     tps = token_count / gen_time if gen_time > 0 else 0.0
 
+    lower = accumulated_text.lower()
+    has_think = "</think>" in lower or "<think>" in lower
+
     return {
         "success": True,
         "text": accumulated_text,
         "ttft": round(ttft, 3),
         "tps": round(tps, 2),
         "total_time": round(total_time, 3),
-        "has_think": "<think>" in accumulated_text and "</think>" in accumulated_text,
+        "has_think": has_think,
     }
 
 
@@ -191,7 +195,7 @@ def main():
         print(f"{m_name:<45} | {l_time:<6} | {t_code:<12} | {t_rsn:<11} | {t_web:<9}")
 
     print("=" * 80)
-    print("Todos os dados brutos e auditoria atômica foram salvos em:")
+    print("Todos os dados brutos e os textos gerados foram salvos em:")
     print("-> backend/data/logs/audit_latest.log")
     print("=" * 80)
 
