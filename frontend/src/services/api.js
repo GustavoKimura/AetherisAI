@@ -34,4 +34,4 @@ export async function deleteConversation(id) {
     });
     if (!res.ok) throw new Error('Falha ao excluir conversa');
     return res.json();
-} s
+}
