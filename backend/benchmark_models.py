@@ -49,7 +49,8 @@ def get_available_models():
     r = httpx.get(f"{API_BASE}/api/models", timeout=10.0)
     if r.status_code != 200:
         raise RuntimeError("Falha ao obter lista de modelos do backend.")
-    return r.json().get("models", [])
+    raw_models = r.json().get("models", [])
+    return [m["filename"] if isinstance(m, dict) else m for m in raw_models]
 
 
 def switch_model(client: httpx.Client, model_name: str) -> float:
@@ -129,7 +130,6 @@ def run_single_test(client: httpx.Client, test: dict):
 def main():
     if not check_backend_online():
         print("[ERRO] O backend do Aetheris nao esta ativo em http://localhost:8000.")
-        print("Inicie o sistema via .\\start_aetheris.ps1 antes de rodar os testes.")
         sys.exit(1)
 
     models = get_available_models()
@@ -138,8 +138,8 @@ def main():
         sys.exit(1)
 
     print("=" * 70)
-    print("        AETHERIS AI - BATERIA DE BENCHMARK AUTOMATIZADA        ")
-    print(f"Modelos detectados ({len(models)}):")
+    print("      AETHERIS AI - BENCHMARK COMPARATIVO DA DUPLA DEFINITIVA     ")
+    print(f"Modelos selecionados ({len(models)}):")
     for m in models:
         print(f" - {m}")
     print("=" * 70)
@@ -195,8 +195,7 @@ def main():
         print(f"{m_name:<45} | {l_time:<6} | {t_code:<12} | {t_rsn:<11} | {t_web:<9}")
 
     print("=" * 80)
-    print("Todos os dados brutos e os textos gerados foram salvos em:")
-    print("-> backend/data/logs/audit_latest.log")
+    print("Dados brutos e textos gerados salvos em: backend/data/logs/audit_latest.log")
     print("=" * 80)
 
 

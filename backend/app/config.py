@@ -5,10 +5,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ModelSettings(BaseModel):
-    name: str = ""
+    name: str = "Qwen2.5-Coder-7B-Instruct-abliterated-Q5_K_M.gguf"
     path: str = ""
     chat_format: Optional[str] = None
-    n_gpu_layers: int = -1
+    n_gpu_layers: int = 99
     n_threads: int = 6
     n_threads_batch: int = 12
     n_batch: int = 1024
@@ -20,7 +20,7 @@ class ModelSettings(BaseModel):
 
 class ContextSettings(BaseModel):
     max_context: int = 8192
-    max_gen_tokens: int = 2048
+    max_gen_tokens: int = 4096
     stop_tokens: List[str] = [
         "<|im_end|>",
         "<|im_start|>",

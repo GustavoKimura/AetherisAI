@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft, Cpu } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, PanelLeftClose, PanelLeft, Cpu, Zap, Award } from 'lucide-react';
 
 export function Sidebar({
     isOpen,
@@ -16,10 +16,10 @@ export function Sidebar({
 }) {
     return (
         <aside
-            className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col justify-between bg-[#1e1f20] border-r border-[#2d2f31] transition-all duration-300 ${isOpen ? 'w-64' : 'w-0 md:w-16'
+            className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col justify-between bg-[#1e1f20] border-r border-[#2d2f31] transition-all duration-300 ${isOpen ? 'w-72' : 'w-0 md:w-16'
                 } overflow-hidden`}
         >
-            <div className="flex flex-col h-full min-w-64">
+            <div className="flex flex-col h-full min-w-72">
                 <div className="p-3 flex items-center justify-between border-b border-[#2d2f31]">
                     <button
                         type="button"
@@ -71,25 +71,40 @@ export function Sidebar({
                     })}
                 </div>
 
-                <div className="p-3 border-t border-[#2d2f31]">
+                <div className="p-3 border-t border-[#2d2f31] space-y-2">
                     {isOpen && (
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold text-[#8e918f] flex items-center gap-1.5 px-1">
                                 <Cpu size={14} />
-                                <span>Modelo Local</span>
+                                <span>Perfil de Inteligência</span>
                             </label>
-                            <select
-                                value={activeModel}
-                                disabled={isSwitchingModel}
-                                onChange={(e) => onSelectModel(e.target.value)}
-                                className="w-full bg-[#131314] border border-[#2d2f31] text-xs text-[#e3e3e3] rounded-xl px-2.5 py-2 outline-none focus:border-[#a8c7fa]"
-                            >
-                                {models.map((m) => (
-                                    <option key={m} value={m}>
-                                        {m}
-                                    </option>
-                                ))}
-                            </select>
+                            <div className="space-y-1">
+                                {models.map((m) => {
+                                    const filename = typeof m === 'object' ? m.filename : m;
+                                    const label = typeof m === 'object' ? m.label : m;
+                                    const isSelected = filename === activeModel;
+                                    const isPro = filename.toLowerCase().includes('coder');
+
+                                    return (
+                                        <button
+                                            key={filename}
+                                            type="button"
+                                            disabled={isSwitchingModel}
+                                            onClick={() => onSelectModel(filename)}
+                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-medium transition-all ${isSelected
+                                                    ? 'bg-[#004a77] text-[#c2e7ff] border border-[#00639b]'
+                                                    : 'bg-[#131314] text-[#8e918f] hover:text-[#c4c7c5] border border-[#2d2f31]'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2 truncate">
+                                                {isPro ? <Award size={15} className="text-[#a8c7fa] shrink-0" /> : <Zap size={15} className="text-[#6dd58c] shrink-0" />}
+                                                <span className="truncate">{label}</span>
+                                            </div>
+                                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#c2e7ff] shrink-0"></span>}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
                 </div>
