@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#131314"/>
+  <path d="M32 12L44 26L32 52L20 26L32 12Z" fill="url(#aetheris-grad)"/>
+  <path d="M32 20L39 28L32 44L25 28L32 20Z" fill="#ffffff" fill-opacity="0.9"/>
+  <circle cx="32" cy="28" r="3" fill="#8ab4f8"/>
+  <defs>
+    <linearGradient id="aetheris-grad" x1="20" y1="12" x2="44" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8ab4f8"/>
+      <stop offset="0.5" stop-color="#1a73e8"/>
+      <stop offset="1" stop-color="#c58af9"/>
+    </linearGradient>
+  </defs>
+</svg>

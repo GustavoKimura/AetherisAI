@@ -13,7 +13,7 @@ import {
 } from './services/api';
 
 export default function App() {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : true);
     const [conversations, setConversations] = useState([]);
     const [activeConvId, setActiveConvId] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -39,8 +39,15 @@ export default function App() {
     const loadInitData = async () => {
         try {
             const modelData = await fetchModels();
-            setModels(modelData.models || []);
-            setActiveModel(modelData.current || (modelData.models[0] || ''));
+            const rawModels = modelData.models || [];
+            setModels(rawModels);
+
+            const defaultFilename = rawModels.length > 0
+                ? (typeof rawModels[0] === 'object' ? rawModels[0].filename : rawModels[0])
+                : '';
+
+            const resolvedCurrent = modelData.current || defaultFilename;
+            setActiveModel(resolvedCurrent);
 
             const convs = await fetchConversations();
             setConversations(convs);
@@ -61,6 +68,9 @@ export default function App() {
             const data = await fetchConversationDetail(id);
             setActiveConvId(data.id);
             setMessages(data.messages || []);
+            if (window.innerWidth < 768) {
+                setSidebarOpen(false);
+            }
         } catch (e) {
             console.error(e);
         }
@@ -70,6 +80,9 @@ export default function App() {
         setActiveConvId(null);
         setMessages([]);
         setInput('');
+        if (window.innerWidth < 768) {
+            setSidebarOpen(false);
+        }
     };
 
     const handleDeleteConversation = async (id) => {
@@ -191,15 +204,19 @@ export default function App() {
             />
 
             <div className="flex-1 flex flex-col h-full min-w-0">
-                <Header activeModel={activeModel} />
+                <Header
+                    activeModel={activeModel}
+                    models={models}
+                    onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                />
 
                 <main className="flex-1 overflow-y-auto">
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-                            <h2 className="text-3xl font-semibold bg-gradient-to-r from-[#8ab4f8] to-[#c58af9] bg-clip-text text-transparent">
+                        <div className="h-full flex flex-col items-center justify-center p-6 text-center select-none">
+                            <h2 className="text-2xl sm:text-3xl font-semibold bg-gradient-to-r from-[#8ab4f8] to-[#c58af9] bg-clip-text text-transparent">
                                 Olá, como posso ajudar?
                             </h2>
-                            <p className="text-sm text-[#8e918f] mt-2 max-w-md">
+                            <p className="text-xs sm:text-sm text-[#8e918f] mt-2 max-w-md">
                                 Aetheris é o seu motor local de inteligência, raciocínio aprofundado e programação.
                             </p>
                         </div>
